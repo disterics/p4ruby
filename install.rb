@@ -12,7 +12,7 @@ require 'pathname'
 class Installer
   include FileUtils
 
-  CONFIG = Config::CONFIG
+  CONFIG = RbConfig::CONFIG
   BIT64 = (1.size == 8)
 
   RB_BASENAME = Pathname.new "P4.rb"
@@ -32,7 +32,7 @@ class Installer
   SERVER_TOP_DIR = Pathname.new "perforce"
 
   # Mysterious "ghost" releases which lack files
-  HOSED_VERSIONS = %w[09.3 11.1]
+  HOSED_VERSIONS = %w[11.2 12.3 13.1 13.2]
 
   P4API_REMOTE_BASENAME = Pathname.new "p4api.tgz"
   P4RUBY_REMOTE_BASENAME = Pathname.new "p4ruby.tgz"
@@ -126,7 +126,7 @@ class Installer
         DISTFILES_DIR + spec.basename
       }
     }
-    
+
     unless @s.platform
       @s.attribute(:platform) {
         guess_platform
@@ -159,31 +159,32 @@ class Installer
   end
 
   def guess_cpu
-    if CONFIG["target_os"] =~ %r!darwin!
-      # specific binaries were removed in p4api-09.1
-      "u"
+    case CONFIG["target_cpu"]
+    when %r!ia!i
+      "ia64"
+    when %r!86!
+      # note: with '_'
+      "x86" + (BIT64 ? "_64" : "")
+    when %r!(ppc|sparc)!i
+      # note: without '_'
+      $1 + (BIT64 ? "64" : "")
     else
-      case CONFIG["target_cpu"]
-      when %r!ia!i
-        "ia64"
-      when %r!86!
-        # note: with '_'
-        "x86" + (BIT64 ? "_64" : "")
-      when %r!(ppc|sparc)!i
-        # note: without '_'
-        $1 + (BIT64 ? "64" : "")
-      else
-        ""
-      end
+      ""
     end
   end
 
   def guess_version(os)
     if match = `uname -a`.match(%r!#{os}\s+\S+\s+(\d+)\.(\d+)!i)
+      start = 0
       version = match.captures.join
+      if os =~ %r!darwin!
+        # darwin versions cannot be guessed
+        start = 90
+        version = start
+      end
       cpu = guess_cpu
       platforms = self.platforms
-      (0..version.to_i).map { |n|
+      (start..version.to_i).map { |n|
         [os, n.to_s, cpu].join
       }.select { |platform|
         platforms.include? platform
@@ -218,22 +219,22 @@ class Installer
       @s.platform = "<platform>"
       message = %Q{
         Auto-fetch not yet handled for this platform.  Run:
-    
+
         \truby install.rb --list-platforms
-    
+
         to see the available platforms, then run
-    
+
         \truby install.rb --platform PLATFORM
-    
+
         with your platform.
-    
+
         If all of the above fails, manually fetch
-    
+
         \tftp://#{SERVER}/#{@s.p4api.remote}
-    
+
         Copy it to #{@s.p4api.local} and run install.rb --local.
       }.gsub(%r!^ +(?=\S)!, "")
-  
+
       mkdir_p(DISTFILES_DIR)
       puts message
     }
@@ -291,7 +292,8 @@ class Installer
   end
 
   def versions
-    remote_files_matching(SERVER_TOP_DIR, %r!r([0-8]\d\.\d)!) { |match|
+    # only look at 2010 and updwards versions
+    remote_files_matching(SERVER_TOP_DIR, %r!r([1-8]\d\.\d)!) { |match|
       match.captures.first
     }.reject { |version|
       HOSED_VERSIONS.include? version
@@ -378,7 +380,7 @@ class Installer
     # perforce server -- switcharoo --
     #
     spec = @s.p4api
-    
+
     version = [CONFIG["MAJOR"], CONFIG["MINOR"]].join
     spec.basename = "p4ruby#{version}.exe"
     fetch_spec(spec)
@@ -447,7 +449,7 @@ class LazyStruct < OpenStruct
             }
           }
         }
-        
+
         #
         # Revert to the old OpenStruct behavior when the writer is called.
         #
@@ -462,7 +464,7 @@ class LazyStruct < OpenStruct
       }
     end
   end
-  
+
   include Mixin
 end
 
