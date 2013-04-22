@@ -1,0 +1,6 @@
+*.gem
+pkg
+test/tmp
+test/version_tmp
+tmp
+.ruby-*
