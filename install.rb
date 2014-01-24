@@ -34,6 +34,9 @@ class Installer
   # Mysterious "ghost" releases which lack files
   HOSED_VERSIONS = %w[11.2 12.3 13.1 13.2 13.6]
 
+  # Cache a last known good version as a fall back
+  LAST_VALID_VERSION = 11.1
+
   P4API_REMOTE_BASENAME = Pathname.new "p4api.tgz"
   P4RUBY_REMOTE_BASENAME = Pathname.new "p4ruby.tgz"
 
@@ -283,6 +286,14 @@ class Installer
     }
   end
 
+  def remote_file_exists?(dir, file)
+    Pathname.new(file).descend do | path |
+      dir = "#{dir}/#{path.dirname}"
+      return false unless @s.ftp.nlst(dir).detect { |n| n.match(%r!#{path.basename}$!) }
+    end
+    true
+  end
+
   def platforms
     remote_files_matching(@s.version_dir, %r!bin\.(\w+)!) { |match|
       match.captures.first
@@ -300,8 +311,18 @@ class Installer
     }.sort
   end
 
+  # find the latest version that has the required p4ruby.tgz 
+  # file
   def latest_version
-    versions.last
+    versions.reverse_each.detect do | version|
+      version_dir = SERVER_TOP_DIR + "r#{version}"
+      path = Pathname.new("bin.tools") + @s.p4ruby.basename
+      if remote_file_exists?(version_dir, path)
+        puts "Found latest version: #{version}"
+        return version
+      end
+    end
+    LAST_VALID_VERSION
   end
 
   def make(*args)
