@@ -32,7 +32,7 @@ class Installer
   SERVER_TOP_DIR = Pathname.new "perforce"
 
   # Mysterious "ghost" releases which lack files
-  HOSED_VERSIONS = %w[11.2 12.3 13.1 13.2]
+  HOSED_VERSIONS = %w[11.2 12.3 13.1 13.2 13.6]
 
   P4API_REMOTE_BASENAME = Pathname.new "p4api.tgz"
   P4RUBY_REMOTE_BASENAME = Pathname.new "p4ruby.tgz"
