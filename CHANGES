@@ -1,6 +1,12 @@
 
 = p4ruby
 
+== version 1.0.12
+
+* Add some smartness to determining the latest version.
+* Always fallback to a known good state if cannot determine latest
+* Work around ruby-gems require_paths bug
+
 == version 1.0.11
 
 * remove previous workaround; now uses list of hosed versions to avoid
